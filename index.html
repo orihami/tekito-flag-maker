@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>適当国旗メーカー | ランダム国旗ジェネレータ</title>
+<meta name="description" content="ストライプ・十字・カントン・星や月などのパターンを組み合わせて、ありそうな国旗をランダム生成するアプリ">
+<style>
+  :root{
+    --bg:#12121c; --panel:#1d1d2e; --panel2:#262640; --line:#3a3a5c;
+    --text:#f2f2f8; --muted:#a7a7c4; --accent:#8b7bff; --accent2:#37d5e8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Noto Sans JP",sans-serif}
+  header{padding:22px 16px 6px;text-align:center}
+  h1{margin:0;font-size:clamp(24px,5vw,38px);letter-spacing:.04em}
+  h1 .grad{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);margin:8px auto 0;max-width:640px;font-size:14px;line-height:1.7}
+  main{max-width:980px;margin:0 auto;padding:16px}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 16px;text-align:center}
+  .flag-wrap{display:flex;justify-content:center}
+  .flag-wrap svg{width:min(680px,100%);height:auto;border-radius:4px;box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.08)}
+  .country{margin-top:16px;font-size:clamp(20px,4vw,28px);font-weight:700}
+  .score{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--accent2);font-size:13px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+  button{cursor:pointer;border:none;border-radius:12px;padding:13px 22px;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#6a5cff);transition:transform .08s,filter .15s}
+  button:hover{filter:brightness(1.12)} button:active{transform:scale(.97)}
+  button.sub-btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:14px;padding:11px 16px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+  .panel h2{margin:0 0 10px;font-size:15px;color:var(--muted);letter-spacing:.08em}
+  .opts{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center}
+  .opts label{font-size:14px;display:flex;gap:7px;align-items:center;cursor:pointer}
+  select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:14px}
+  input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent)}
+  .spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 20px;font-size:14px;line-height:1.8}
+  .spec b{color:var(--muted);font-weight:600;margin-right:6px}
+  .chip{display:inline-block;width:15px;height:15px;border-radius:4px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(255,255,255,.35)}
+  .seed{font-family:ui-monospace,monospace;background:var(--panel2);padding:2px 8px;border-radius:6px}
+  #history{display:flex;flex-wrap:wrap;gap:10px}
+  #history .h-item{width:104px;cursor:pointer}
+  #history svg{width:104px;height:auto;border-radius:3px;box-shadow:0 4px 14px rgba(0,0,0,.4);display:block}
+  #history .h-item:hover svg{outline:2px solid var(--accent2)}
+  #history .h-name{font-size:11px;color:var(--muted);margin-top:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .empty{color:var(--muted);font-size:13px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px;line-height:1.8}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>適当国旗<span class="grad">メーカー</span></h1>
+  <p class="sub">国旗のデザインはだいたいパターンでできている。何色の帯がどう走るか、十字やカントンがあるか、星や月が何個どこにあるか。その部品をランダムに組み合わせて「なんかありそうな国旗」を適当に作るアプリです。</p>
+</header>
+<main>
+  <section class="stage">
+    <div class="flag-wrap" id="flagStage"></div>
+    <div class="country" id="countryName">―</div>
+    <div><span class="score" id="scoreBadge">国旗っぽさ ―</span></div>
+    <div class="controls">
+      <button id="btnGen">🎲 適当に作る</button>
+      <button class="sub-btn" id="btnPng">PNGで保存</button>
+      <button class="sub-btn" id="btnSvg">SVGで保存</button>
+      <button class="sub-btn" id="btnCopy">リンクをコピー（再現用）</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>条件</h2>
+    <div class="opts">
+      <label>複雑さ
+        <select id="optComplexity">
+          <option value="simple">シンプル</option>
+          <option value="normal" selected>ふつう</option>
+          <option value="rich">ごちゃめ</option>
+        </select>
+      </label>
+      <label>縦横比
+        <select id="optRatio">
+          <option value="600" selected>3 : 2</option>
+          <option value="500">9 : 5</option>
+          <option value="450">2 : 1</option>
+          <option value="675">4 : 3</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="lockLayout"> レイアウト固定</label>
+      <label><input type="checkbox" id="lockPalette"> 色固定</label>
+      <label><input type="checkbox" id="lockSymbol"> マーク固定</label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>この旗のレシピ（削減結果）</h2>
+    <div class="spec" id="specPanel"></div>
+  </section>
+
+  <section class="panel">
+    <h2>作った旗</h2>
+    <div id="history"><span class="empty">まだ無いよ。上のボタンで作ってみて。</span></div>
+  </section>
+</main>
+<footer>
+  <kbd>Space</kbd> でも新しい旗が作れます。リンクにシードが入るので、同じ旗をいつでも再現できます。<br>
+  実在の国旗とは関係のない、架空の旗です。
+</footer>
+
+<script>
+"use strict";
+/* ---------- 乱数（シード付き・再現可能） ---------- */
+function hashSeed(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeRng(seed){const r=mulberry32(hashSeed(seed));return{
+  next:r,
+  pick(arr){return arr[Math.floor(r()*arr.length)]},
+  int(min,max){return min+Math.floor(r()*(max-min+1))},
+  chance(p){return r()<p},
+  shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+}}
+
+/* ---------- 色：実在の国旗でよくある組み合わせ ---------- */
+const PALETTES=[
+  ["#CE1126","#FFFFFF","#002868"],["#0055A4","#FFFFFF","#EF4135"],
+  ["#DA291C","#FFFFFF","#0039A6"],["#009B77","#FFFFFF","#CE1126"],
+  ["#FCDD09","#003893","#CE1126"],["#FF9932","#FFFFFF","#138808"],
+  ["#000000","#DD0000","#FFCE00"],["#000000","#FCEE21","#EF3340"],
+  ["#005EB8","#FFFFFF","#FDB913"],["#74ACDF","#FFFFFF","#F6B40E"],
+  ["#009246","#FFFFFF","#CE2B37"],["#C8102E","#FFFFFF","#012169"],
+  ["#00247D","#FFFFFF","#CF142B"],["#FFCC00","#DD0000","#000000"],
+  ["#007A3D","#FFFFFF","#000000"],["#007A3D","#FCDD09","#CE1126"],
+  ["#FFFFFF","#009246","#D21034"],["#FCD116","#003893","#FFFFFF"],
+  ["#002654","#FFFFFF","#ED2939"],["#FFFFFF","#DA291C","#007A3D"],
+  ["#5B92E5","#FFFFFF","#FCD116"],["#D21034","#FFFFFF","#006B3F"],
+  ["#FFCC33","#006600","#CC0000"],["#078930","#FCDD09","#DA121A"],
+  ["#0F47AF","#FCDD09","#C8102E"],["#11457E","#FFFFFF","#D7141A"],
+  ["#003F87","#FCD116","#CE1126"],["#FFFFFF","#0039A6","#D52B1E"],
+  ["#00966E","#FFFFFF","#D62612"],["#EF3340","#FFFFFF","#009739"],
+  ["#002868","#BF0A30","#FFFFFF"],["#3C3B6E","#FFFFFF","#B22234"],
+  ["#006AA7","#FECC00","#FFFFFF"],["#005BBB","#FFD500","#FFFFFF"],
+  ["#AA151B","#F1BF00","#FFFFFF"],["#AA151B","#F1BF00","#AA151B"],
+  ["#0072CE","#FFFFFF","#F2A900"],["#CE1126","#FCDD09","#000000"],
+  ["#007749","#FFB81C","#001489"],["#DE3831","#FFFFFF","#002395"],
+  ["#000000","#FFFFFF","#007A3D"],["#E8112D","#FFFFFF","#FFCC02"],
+  ["#2E8B57","#FFFFFF","#FF7F00"],["#FF8200","#FFFFFF","#009A44"],
+  ["#169B62","#FFFFFF","#FF883E"],["#FFFFFF","#FF0000","#007A3D"],
+  ["#8A1538","#FFFFFF","#FFD100"],["#003DA5","#DA291C","#FFFFFF"]
+];
+const COLOR_NAMES={"#CE1126":"赤","#EF4135":"赤","#DA291C":"赤","#C8102E":"赤","#D21034":"赤","#CF142B":"赤","#ED2939":"赤","#B22234":"赤","#BF0A30":"赤","#AA151B":"深紅","#8A1538":"えんじ","#DE3831":"赤","#E8112D":"赤","#D52B1E":"赤","#D7141A":"赤","#FF0000":"赤","#CC0000":"赤","#DD0000":"赤","#002868":"紺","#00247D":"紺","#012169":"紺","#002654":"紺","#0039A6":"青","#0055A4":"青","#005BBB":"青","#005EB8":"青","#003893":"青","#003F87":"青","#003DA5":"青","#002395":"青","#001489":"紺","#0F47AF":"青","#11457E":"青","#0072CE":"青","#006AA7":"青","#74ACDF":"水色","#5B92E5":"水色","#009246":"緑","#009B77":"緑","#138808":"緑","#007A3D":"緑","#006B3F":"緑","#078930":"緑","#009739":"緑","#00966E":"緑","#009A44":"緑","#2E8B57":"緑","#169B62":"緑","#006600":"深緑","#007749":"緑","#FCDD09":"黄","#FFCE00":"黄","#FCD116":"黄","#F1BF00":"黄","#FFD500":"黄","#FFCC00":"黄","#FECC00":"黄","#FFCC33":"黄","#FFCC02":"黄","#FFD100":"黄","#FDB913":"黄","#F6B40E":"黄","#F2A900":"黄","#FFB81C":"黄","#FFFFFF":"白","#000000":"黒","#FF9932":"橙","#FF8200":"橙","#FF883E":"橙","#FF7F00":"橙"};
+function colorName(c){return COLOR_NAMES[c]||c}
+function isLight(c){const n=parseInt(c.slice(1),16);const r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (0.299*r+0.587*g+0.114*b)>165}
+function contrastOn(bg,colors,rng){const dark=colors.filter(c=>!isLight(c));const light=colors.filter(c=>isLight(c));if(isLight(bg)&&dark.length)return rng.pick(dark);if(!isLight(bg)&&light.length)return rng.chance(.75)?rng.pick(light):"#FFD94D";return isLight(bg)?"#1a1a2e":"#FFFFFF"}
+
+/* ---------- レイアウト定義 ---------- */
+const LAYOUTS=[
+  {id:"hstripes",name:"横条",w:16},{id:"vstripes",name:"縦条",w:14},
+  {id:"nordic",name:"北欧十字",w:9},{id:"canton",name:"カントン（左上区画）",w:12},
+  {id:"saltire",name:"斜め十字",w:7},{id:"diagonal",name:"斜め帯",w:9},
+  {id:"triangle",name:"ホイスト三角＋横条",w:10},{id:"border",name:"縁取り",w:6},
+  {id:"quarters",name:"四分割",w:6},{id:"disc",name:"円（日の丸系）",w:8},
+  {id:"chevron",name:"シェブロン（山形）",w:6},{id:"pall",name:"Y字（ポール）",w:5},
+  {id:"cross",name:"中央十字",w:7},{id:"rays",name:"放射（太陽光線）",w:4},
+  {id:"plainband",name:"単色＋中央帯",w:8}
+];
+const SYMBOLS=[
+  {id:"star",name:"星",w:20},{id:"disc",name:"円",w:10},{id:"crescent",name:"三日月",w:9},
+  {id:"diamond",name:"菱形",w:7},{id:"sun",name:"太陽",w:7},{id:"ring",name:"輪",w:5},
+  {id:"triangle",name:"三角",w:4},{id:"cross",name:"小十字",w:5},{id:"none",name:"なし",w:16}
+];
+const NAME_A=["ベル","アル","カ","セ","トラ","ミ","ル","ゼ","ド","バ","ケ","ソ","ヴェ","ナ","オル","タ","ギ","フ","ヨル","シ"];
+const NAME_B=["カ","ニ","タ","ガ","ミ","ロ","ス","ダ","ブ","キ","ラ","ネ","ト","ハ"];
+const NAME_C=["ニア","リア","ビア","シア","ランド","チア","ミナ","ロア","ディナ","ヴァ","スタン","ギア"];
+const FORMS=["共和国","王国","連邦","公国","民主共和国","連合王国","共和国連邦"];
+
+/* ---------- 仕様の生成 ---------- */
+function genSpec(seed,prev,locks){
+  const rng=makeRng(seed);
+  const cx=document.getElementById("optComplexity").value;
+  const spec={seed};
+  // レイアウト
+  if(prev&&locks.layout){spec.layout=prev.layout;spec.layoutOpt=prev.layoutOpt}
+  else{
+    let pool=LAYOUTS.filter(l=>cx!=="simple"||!["rays","pall","quarters"].includes(l.id));
+    let bag=[];pool.forEach(l=>{for(let i=0;i<l.w;i++)bag.push(l)});spec.layout=rng.pick(bag).id;
+    spec.layoutOpt={n:rng.int(2,cx==="simple"?3:4),thick:rng.chance(.3),fim:rng.chance(.55),offset:rng.chance(.35),rays:rng.int(9,13)};
+  }
+  // 色
+  if(prev&&locks.palette){spec.colors=prev.colors}
+  else{spec.colors=rng.pick(PALETTES).slice(); if(rng.chance(.35))spec.colors=rng.shuffle(spec.colors)}
+  const C=spec.colors;
+  // マーク
+  if(prev&&locks.symbol){spec.symbol=prev.symbol}
+  else{
+    let bag=[];SYMBOLS.forEach(s=>{let w=s.w;if(cx==="simple"&&s.id!=="none")w=Math.ceil(w*.7);if(cx==="rich"&&s.id==="none")w=7;for(let i=0;i<w;i++)bag.push(s)});
+    const sym=rng.pick(bag).id;
+    let counts=[1,1,1,3,4,5,7];let count=sym==="star"?(cx==="simple"?rng.pick([1,1,3]):rng.pick(counts)):1;
+    spec.symbol={type:sym,count,arr:rng.pick(["single","row","arc","circle","cross","scatter"])};
+    if(count===1)spec.symbol.arr="single";
+  }
+  // 国名
+  spec.country=rng.pick(NAME_A)+rng.pick(NAME_B)+rng.pick(NAME_C);
+  spec.form=rng.pick(FORMS);
+  spec.ratioH=+document.getElementById("optRatio").value;
+  // 国旗っぽさ（適当なノリで算出）
+  spec.score=Math.min(99,Math.max(61,Math.round(76+ (spec.symbol.type==="none"?4:9) + (C.length===3?6:3) + rng.int(-6,9))));
+  return spec;
+}
+
+/* ---------- 図形部品 ---------- */
+function starPath(cx,cy,r,rot){
+  rot=rot===undefined?-90:rot;let d="";
+  for(let i=0;i<10;i++){const rad=r*(i%2?0.42:1);const a=(rot+i*36)*Math.PI/180;const x=(cx+rad*Math.cos(a)).toFixed(1),y=(cy+rad*Math.sin(a)).toFixed(1);d+=(i?"L":"M")+x+" "+y}
+  return d+"Z";
+}
+function symbolSVG(type,cx,cy,s,color,bg){
+  switch(type){
+    case "star":return `<path d="${starPath(cx,cy,s)}" fill="${color}"/>`;
+    case "disc":return `<circle cx="${cx}" cy="${cy}" r="${s*0.85}" fill="${color}"/>`;
+    case "ring":return `<circle cx="${cx}" cy="${cy}" r="${s*0.8}" fill="none" stroke="${color}" stroke-width="${s*0.28}"/>`;
+    case "diamond":return `<path d="M${cx} ${cy-s} L${cx+s*0.72} ${cy} L${cx} ${cy+s} L${cx-s*0.72} ${cy} Z" fill="${color}"/>`;
+    case "triangle":return `<path d="M${cx} ${cy-s*0.85} L${cx+s*0.9} ${cy+s*0.75} L${cx-s*0.9} ${cy+s*0.75} Z" fill="${color}"/>`;
+    case "cross":{const w=s*0.34;return `<path d="M${cx-w/2} ${cy-s} h${w} v${s-w/2} h${s-w/2} v${w} h-${s-w/2} v${s-w/2} h-${w} v-${s-w/2} h-${s-w/2} v-${w} h${s-w/2} Z" fill="${color}"/>`}
+    case "crescent":return `<path d="M${cx} ${cy} m${-s*0.85} 0 a${s*0.85} ${s*0.85} 0 1 0 ${s*1.7} 0 a${s*0.68} ${s*0.68} 0 1 1 ${-s*1.7} 0 Z" fill="${color}" fill-rule="evenodd" transform="rotate(20 ${cx} ${cy})"/>`;
+    case "sun":{let rays="";for(let i=0;i<12;i++){const a=i*30*Math.PI/180;const x1=cx+Math.cos(a)*s*0.62,y1=cy+Math.sin(a)*s*0.62,x2=cx+Math.cos(a+0.13)*s,y2=cy+Math.sin(a+0.13)*s,x3=cx+Math.cos(a-0.13)*s,y3=cy+Math.sin(a-0.13)*s;rays+=`M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)} L${x3.toFixed(1)} ${y3.toFixed(1)} Z`}return `<path d="${rays}" fill="${color}"/><circle cx="${cx}" cy="${cy}" r="${s*0.58}" fill="${color}"/>`}
+    default:return "";
+  }
+}
+function symbolsGroup(spec,anchor){
+  const sym=spec.symbol;if(sym.type==="none"||!anchor)return "";
+  const color=contrastOn(anchor.bg,spec.colors,makeRng(spec.seed+"sym"));
+  const {x,y,size}=anchor;let out="";
+  if(sym.type==="star"&&sym.count>1){
+    const n=sym.count,s=size*(sym.arr==="circle"?0.42:0.55);
+    for(let i=0;i<n;i++){
+      let px=x,py=y;
+      if(sym.arr==="row"){px=x+(i-(n-1)/2)*size*1.25}
+      else if(sym.arr==="arc"){const a=Math.PI*(0.15+0.7*(n===1?0:i/(n-1)));px=x+Math.cos(a)*size*1.05;py=y-Math.sin(a)*size*0.8+size*0.35}
+      else if(sym.arr==="circle"){const a=i/n*Math.PI*2-Math.PI/2;px=x+Math.cos(a)*size*0.95;py=y+Math.sin(a)*size*0.95}
+      else if(sym.arr==="cross"){const pos=[[0,0],[0,-1.15],[0,1.15],[-1.15,0],[1.15,0],[0,-2.3],[0,2.3]];px=x+pos[i%pos.length][0]*size;py=y+pos[i%pos.length][1]*size}
+      else{const r=makeRng(spec.seed+"sc"+i);px=x+(r.next()-0.5)*size*2.4;py=y+(r.next()-0.5)*size*2.0}
+      out+=symbolSVG("star",px,py,s,color,anchor.bg);
+    }
+    return out;
+  }
+  if(sym.type==="crescent"){
+    return symbolSVG("crescent",x-size*0.25,y,size,color,anchor.bg)+symbolSVG("star",x+size*0.62,y-size*0.1,size*0.45,color,anchor.bg);
+  }
+  return symbolSVG(sym.type,x,y,size,color,anchor.bg);
+}
+/* ---------- レイアウト描画 ---------- */
+let renderSeq=0;
+const ARR_NAMES={single:"単独",row:"横並び",arc:"弧状",circle:"円形",cross:"十字形",scatter:"散らばせ"};
+function renderSVG(spec){
+  const W=900,H=spec.ratioH,C=spec.colors,o=spec.layoutOpt,uid="c"+(++renderSeq);
+  const cyc=i=>C[i%C.length];
+  let s="",anchor=null;
+  const clip=`<clipPath id="${uid}"><rect width="${W}" height="${H}"/></clipPath>`;
+  const stripesH=(colors,weights)=>{let y=0,out="";const tot=weights.reduce((a,b)=>a+b,0);colors.forEach((col,i)=>{const h=H*weights[i]/tot;out+=`<rect y="${y.toFixed(1)}" width="${W}" height="${(h+1).toFixed(1)}" fill="${col}"/>`;y+=h});return out};
+  const stripesV=(colors,weights)=>{let x=0,out="";const tot=weights.reduce((a,b)=>a+b,0);colors.forEach((col,i)=>{const w=W*weights[i]/tot;out+=`<rect x="${x.toFixed(1)}" width="${(w+1).toFixed(1)}" height="${H}" fill="${col}"/>`;x+=w});return out};
+  const weights=n=>{const w=Array(n).fill(1);if(o.thick&&n>=3)w[Math.floor(n/2)]=1.7;return w};
+  switch(spec.layout){
+    case "hstripes":{const cols=Array.from({length:o.n},(_,i)=>cyc(i));s=stripesH(cols,weights(o.n));const mid=cols[Math.floor(o.n/2)];anchor={x:W/2,y:H/2,size:H*0.15,bg:mid,label:"中央"};break}
+    case "vstripes":{const cols=Array.from({length:o.n},(_,i)=>cyc(i));s=stripesV(cols,weights(o.n));const mid=cols[Math.floor(o.n/2)];anchor={x:W/2,y:H/2,size:H*0.15,bg:mid,label:"中央"};break}
+    case "nordic":{const cx=W*0.36,cw=H*0.19;s=`<rect width="${W}" height="${H}" fill="${C[0]}"/>`;if(o.fim)s+=`<rect x="${cx-cw*0.78}" width="${cw*1.56}" height="${H}" fill="${cyc(2)}"/><rect y="${H/2-cw*0.78}" width="${W}" height="${cw*1.56}" fill="${cyc(2)}"/>`;s+=`<rect x="${cx-cw/2}" width="${cw}" height="${H}" fill="${cyc(1)}"/><rect y="${H/2-cw/2}" width="${W}" height="${cw}" fill="${cyc(1)}"/>`;anchor={x:cx/2,y:H/4,size:H*0.115,bg:C[0],label:"左上区画"};break}
+    case "canton":{const cols=[];for(let i=0;i<6;i++)cols.push(i%2?cyc(1):"#FFFFFF"===C[0]?cyc(1):C[0]);if(cols[0]===cols[1])cols[0]=cyc(2);s=stripesH(cols,Array(6).fill(1));const cc=C.find(c=>c!==cols[0]&&c!==cols[1])||cyc(2);s+=`<rect width="${W/2}" height="${H/2}" fill="${cc}"/>`;anchor={x:W/4,y:H/4,size:H*0.13,bg:cc,label:"カントン内"};break}
+    case "saltire":{const wdt=H*0.17;s=`<rect width="${W}" height="${H}" fill="${C[0]}"/>`;if(o.fim)s+=`<line x1="0" y1="0" x2="${W}" y2="${H}" stroke="${cyc(2)}" stroke-width="${wdt*1.5}"/><line x1="0" y1="${H}" x2="${W}" y2="0" stroke="${cyc(2)}" stroke-width="${wdt*1.5}"/>`;s+=`<line x1="0" y1="0" x2="${W}" y2="${H}" stroke="${cyc(1)}" stroke-width="${wdt}"/><line x1="0" y1="${H}" x2="${W}" y2="0" stroke="${cyc(1)}" stroke-width="${wdt}"/>`;anchor={x:W/2,y:H/2,size:H*0.115,bg:cyc(2),label:"中央の円盤内",disc:cyc(2),discR:H*0.185};break}
+    case "diagonal":{s=`<g clip-path="url(#${uid})"><g transform="rotate(-16 ${W/2} ${H/2})">${stripesV([cyc(0),cyc(1),cyc(2)],[1,1,1]).replaceAll(`height="${H}"`,`height="${H*2}" y="${-H/2}"`)}</g></g>`;anchor={x:W/2,y:H/2,size:H*0.14,bg:cyc(1),label:"中央"};break}
+    case "triangle":{const cols=[cyc(1),cyc(2)];s=stripesH(cols,[1,1]);const tc=C[0]===cols[0]||C[0]===cols[1]?cyc(0):C[0];s+=`<path d="M0 0 L${W*0.44} ${H/2} L0 ${H} Z" fill="${tc}"/>`;anchor={x:W*0.15,y:H/2,size:H*0.105,bg:tc,label:"三角の中"};break}
+    case "border":{s=`<rect width="${W}" height="${H}" fill="${C[0]}"/><rect x="${H*0.085}" y="${H*0.085}" width="${W-H*0.17}" height="${H*0.83}" fill="${cyc(2)}"/><rect x="${H*0.16}" y="${H*0.16}" width="${W-H*0.32}" height="${H*0.68}" fill="${cyc(1)}"/>`;anchor={x:W/2,y:H/2,size:H*0.15,bg:cyc(1),label:"中央"};break}
+    case "quarters":{s=`<rect width="${W/2}" height="${H/2}" fill="${C[0]}"/><rect x="${W/2}" width="${W/2}" height="${H/2}" fill="${cyc(1)}"/><rect y="${H/2}" width="${W/2}" height="${H/2}" fill="${cyc(1)}"/><rect x="${W/2}" y="${H/2}" width="${W/2}" height="${H/2}" fill="${C[0]}"/>`;anchor={x:W/2,y:H/2,size:H*0.105,bg:cyc(2),label:"中央の円盤内",disc:cyc(2),discR:H*0.17};break}
+    case "disc":{const cx=o.offset?W*0.44:W/2,r=H*0.31;s=`<rect width="${W}" height="${H}" fill="${C[0]}"/><circle cx="${cx}" cy="${H/2}" r="${r}" fill="${cyc(1)}"/>`;anchor={x:cx,y:H/2,size:r*0.48,bg:cyc(1),label:"円の中"};break}
+    case "chevron":{s=stripesH([cyc(0),cyc(2)],[1,1]);if(o.fim)s+=`<path d="M0 0 L${W*0.4} ${H/2} L0 ${H} L0 ${H*0.8} L${W*0.2} ${H/2} L0 ${H*0.2} Z" fill="${cyc(2)}"/>`;s+=`<path d="M0 ${H*0.07} L${W*0.33} ${H/2} L0 ${H*0.93} L0 ${H*0.76} L${W*0.15} ${H/2} L0 ${H*0.24} Z" fill="${cyc(1)}"/>`;anchor={x:W*0.1,y:H/2,size:H*0.09,bg:cyc(1),label:"山形の中"};break}
+    case "pall":{s=`<rect width="${W}" height="${H}" fill="${C[0]}"/><path d="M${W/2} ${H/2} L${W} 0 L${W} ${H/2} Z" fill="${cyc(1)}"/><path d="M${W/2} ${H/2} L${W} ${H} L0 ${H} L0 ${H/2} Z" fill="${cyc(2)}"/>`;const pw=H*0.13;s+=`<path d="M0 0 L${W/2} ${H/2} L${W} 0 M${W/2} ${H/2} L${W/2} ${H}" stroke="${o.fim?cyc(2):"#FFFFFF"}" stroke-width="${pw*1.7}" fill="none"/><path d="M0 0 L${W/2} ${H/2} L${W} 0 M${W/2} ${H/2} L${W/2} ${H}" stroke="${C[0]===cyc(1)?cyc(0):cyc(1)}" stroke-width="${pw}" fill="none" opacity="0"/>`;s+=`<path d="M0 0 L${W/2} ${H/2} L${W} 0 M${W/2} ${H/2} L${W/2} ${H}" stroke="#FFFFFF" stroke-width="${pw}" fill="none" style="mix-blend-mode:normal"/><path d="M0 0 L${W/2} ${H/2} L${W} 0 M${W/2} ${H/2} L${W/2} ${H}" stroke="${spec.colors[1]}" stroke-width="${pw*0.62}" fill="none"/>`;anchor={x:W/2,y:H*0.16,size:H*0.085,bg:C[0],label:"上部"};break}
+    case "cross":{const cw=H*0.23;s=`<rect width="${W}" height="${H}" fill="${C[0]}"/>`;if(o.fim)s+=`<rect x="${W/2-cw*0.72}" width="${cw*1.44}" height="${H}" fill="${cyc(2)}"/><rect y="${H/2-cw*0.72}" width="${W}" height="${cw*1.44}" fill="${cyc(2)}"/>`;s+=`<rect x="${W/2-cw/2}" width="${cw}" height="${H}" fill="${cyc(1)}"/><rect y="${H/2-cw/2}" width="${W}" height="${cw}" fill="${cyc(1)}"/>`;anchor={x:W/2,y:H/2,size:H*0.095,bg:cyc(1),label:"十字の交点"};break}
+    case "rays":{const ox=W*0.27,oy=H/2,R=Math.max(W,H)*1.05,n=o.rays;let wedges="";for(let i=0;i<n;i++){const a1=i/n*Math.PI*2,a2=(i+0.5)/n*Math.PI*2;wedges+=`<path d="M${ox} ${oy} L${(ox+R*Math.cos(a1)).toFixed(0)} ${(oy+R*Math.sin(a1)).toFixed(0)} A${R} ${R} 0 0 1 ${(ox+R*Math.cos(a2)).toFixed(0)} ${(oy+R*Math.sin(a2)).toFixed(0)} Z" fill="${i%2?cyc(1):cyc(0)}"/>`}s=`<rect width="${W}" height="${H}" fill="${cyc(0)}"/><g clip-path="url(#${uid})">${wedges}</g>`;anchor={x:ox,y:oy,size:H*0.13,bg:cyc(2),label:"太陽の中",disc:cyc(2),discR:H*0.24};break}
+    default:{s=`<rect width="${W}" height="${H}" fill="${C[0]}"/><rect y="${H*0.33}" width="${W}" height="${H*0.34}" fill="${cyc(1)}"/>`;anchor={x:W/2,y:H/2,size:H*0.135,bg:cyc(1),label:"中央の帯の上"}}
+  }
+  let symPart="";
+  if(anchor&&spec.symbol.type!=="none"){
+    if(anchor.disc)symPart+=`<circle cx="${anchor.x}" cy="${anchor.y}" r="${anchor.discR}" fill="${anchor.disc}"/>`;
+    symPart+=symbolsGroup(spec,anchor);
+  }
+  spec._anchorLabel=anchor?anchor.label:"―";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="架空の国旗">${clip}<g clip-path="url(#${uid})">${s}</g>${symPart}</svg>`;
+}
+
+/* ---------- 画面まわり ---------- */
+let current=null;const historyList=[];
+const $=id=>document.getElementById(id);
+function layoutName(id){const l=LAYOUTS.find(v=>v.id===id);return l?l.name:id}
+function show(spec,addHist){
+  current=spec;
+  $("flagStage").innerHTML=renderSVG(spec);
+  $("countryName").textContent=spec.country+" "+spec.form;
+  $("scoreBadge").textContent="国旗っぽさ "+spec.score+"%";
+  const sym=spec.symbol;const symDef=SYMBOLS.find(v=>v.id===sym.type);
+  const symText=sym.type==="none"?"なし":symDef.name+(sym.type==="star"&&sym.count>1?" ×"+sym.count+"（"+ARR_NAMES[sym.arr]+"）":"")+(sym.type==="crescent"?"＋星":"");
+  const chips=spec.colors.map(c=>`<span class="chip" style="background:${c}"></span>${colorName(c)}`).join("・");
+  $("specPanel").innerHTML=
+    `<div><b>レイアウト</b>${layoutName(spec.layout)}</div>`+
+    `<div><b>色</b>${chips}</div>`+
+    `<div><b>マーク</b>${symText}${sym.type!=="none"?" ／ 位置："+spec._anchorLabel:""}</div>`+
+    `<div><b>シード</b><span class="seed">${spec.seed}</span></div>`;
+  history.replaceState(null,"","#"+encodeURIComponent(spec.seed));
+  if(addHist){historyList.unshift(spec);if(historyList.length>18)historyList.pop();drawHistory()}
+}
+function drawHistory(){
+  if(!historyList.length)return;
+  $("history").innerHTML=historyList.map((sp,i)=>`<div class="h-item" data-i="${i}">${renderSVG(sp)}<div class="h-name">${sp.country}</div></div>`).join("");
+  document.querySelectorAll("#history .h-item").forEach(el=>el.addEventListener("click",()=>show(historyList[+el.dataset.i],false)));
+}
+function newSeed(){return Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-3)}
+function generate(seed){
+  const locks={layout:$("lockLayout").checked,palette:$("lockPalette").checked,symbol:$("lockSymbol").checked};
+  const spec=genSpec(seed||newSeed(),current,locks);
+  show(spec,true);
+}
+$("btnGen").addEventListener("click",()=>generate());
+$("optRatio").addEventListener("change",()=>{if(current){current.ratioH=+$("optRatio").value;show(current,false)}});
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&!/SELECT|INPUT|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();generate()}});
+function download(name,blob){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+$("btnSvg").addEventListener("click",()=>{if(current)download(current.country+"-flag.svg",new Blob([renderSVG(current)],{type:"image/svg+xml"}))});
+$("btnPng").addEventListener("click",()=>{
+  if(!current)return;const svg=renderSVG(current);const img=new Image();
+  img.onload=()=>{const cv=document.createElement("canvas");cv.width=1800;cv.height=1800*current.ratioH/900;const ctx=cv.getContext("2d");ctx.drawImage(img,0,0,cv.width,cv.height);cv.toBlob(b=>download(current.country+"-flag.png",b),"image/png")};
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+});
+$("btnCopy").addEventListener("click",async()=>{
+  try{await navigator.clipboard.writeText(location.href);$("btnCopy").textContent="コピーしたよ ✓";setTimeout(()=>$("btnCopy").textContent="リンクをコピー（再現用）",1600)}
+  catch(e){prompt("このリンクをコピーしてね",location.href)}
+});
+const startSeed=location.hash?decodeURIComponent(location.hash.slice(1)):"";
+generate(startSeed||undefined);
+</script>
+</body>
+</html>
